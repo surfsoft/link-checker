@@ -23,6 +23,14 @@ public class Reporter {
         System.err.println("bad link on " + page + " to " + target + ": " + e);
     }
 
+    public void badEmailAddress(URI page, String emailAddress) {
+        System.err.println("bad email on " + page + " to " + emailAddress);
+    }
+
+    public void emailForDifferentDomain(URI page, String emailAddress) {
+        System.err.println("warning:  email address '" + emailAddress + "' on page " + page + " is for a different domain");
+    }
+
     public void crawling(URI uri, int complete, int total) {
         System.out.printf("[%4s/%4s] %s\r", complete, total, uri);
     }
@@ -30,4 +38,5 @@ public class Reporter {
     public void error(Exception e) {
         System.err.println(e);
     }
+
 }

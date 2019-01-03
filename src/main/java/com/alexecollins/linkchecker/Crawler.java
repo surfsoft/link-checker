@@ -24,6 +24,7 @@ public class Crawler {
 	private final Set<Future<Void>> futures = Collections.synchronizedSet(new HashSet<Future<Void>>());
 	private final Set<URI> uris = Collections.synchronizedSet(new HashSet<URI>());
 	private final Map<URI, Set<URI>> toFrom = Collections.synchronizedMap(new HashMap<URI, Set<URI>>());
+	private final Set<String> emailAddresses = Collections.synchronizedSet(new HashSet<String>());
 	private final CachingConfig cachingConfig;
 	private final URI home;
     private final Reporter reporter;
@@ -115,20 +116,46 @@ public class Crawler {
                 continue;
             }
 
-            if (!isCrawlable(href)) {
-                continue;
+            switch(href.getScheme()) {
+                case "mailto":
+                    if (!isValidEmailAddress(href.getSchemeSpecificPart())) {
+                        reporter.badEmailAddress(uri, href.getSchemeSpecificPart());
+                    }
+                    else if (isDifferentDomain(uri, href.getSchemeSpecificPart().split("@")[1])) {
+                        reporter.emailForDifferentDomain(uri, href.getSchemeSpecificPart());
+                    }
+                    break;
+
+                default:
+                    if (isCrawlable(href)) {
+                        synchronized (toFrom) {
+                            if (!toFrom.containsKey(href)) {
+                                toFrom.put(href, new HashSet<URI>());
+                            }
+
+                            toFrom.get(href).add(uri);
+                        }
+                        submit(href, uri);
+                    }
+
             }
 
-            synchronized (toFrom) {
-                if (!toFrom.containsKey(href)) {
-                    toFrom.put(href, new HashSet<URI>());
-                }
 
-                toFrom.get(href).add(uri);
-            }
-
-            submit(href, uri);
         }
+    }
+
+    private boolean isDifferentDomain(URI uri, String domainName) {
+        return !uri.getHost().endsWith(domainName);
+    }
+
+    private boolean isValidEmailAddress(String emailAddress) {
+
+        String[] emailAddressComponents = emailAddress.split("@");
+
+        return emailAddressComponents.length == 2
+                && emailAddressComponents[0].length() > 0
+                && emailAddressComponents[1].split("\\.").length > 1;
+
     }
 
     private void submit(final URI uri, final URI parent) {
